@@ -218,8 +218,8 @@ header.top {
   <section class="panel">
     <div class="result idle" id="result" aria-live="polite">
       <div class="eyebrow" id="r-eyebrow">Henüz zar atılmadı</div>
-      <h1 id="r-name">???</h1>
-      <div class="cls" id="r-cls"></div>
+      <h1 id="r-name" lang="en">???</h1>
+      <div class="cls" id="r-cls" lang="en"></div>
       <p id="r-desc">Kilitli legendlarına tıklayıp kapat, sonra aşağıdaki butona bas.</p>
     </div>
 
@@ -239,7 +239,7 @@ header.top {
 
     <div class="box">
       <h2>Son çıkanlar</h2>
-      <div class="history" id="history"></div>
+      <div class="history" id="history" lang="en"></div>
     </div>
   </section>
 
@@ -292,7 +292,7 @@ header.top {
     const t = document.createElement("div"); t.className = "tiles";
     c.legends.forEach((n, i) => {
       const b = document.createElement("button");
-      b.type = "button"; b.className = "tile";
+      b.type = "button"; b.className = "tile"; b.lang = "en";
       b.style.setProperty("--cc", c.color);
       b.style.setProperty("--ang", (25 + (n.length * 37 + i * 53) % 130) + "deg");
       const mono = n.split(" ").map(w => w[0]).join("").slice(0, 2);
@@ -306,7 +306,7 @@ header.top {
       tiles.set(n, b); t.appendChild(b);
     });
     const label = document.createElement("div");
-    label.className = "glabel";
+    label.className = "glabel"; label.lang = "en";
     label.innerHTML = icon(c.id) + c.name + ' <small id="cnt-' + c.id + '"></small>';
     g.appendChild(t); g.appendChild(label);
     groupsEl.appendChild(g);
@@ -316,7 +316,7 @@ header.top {
   const chipsEl = $("classChips");
   CLASSES.forEach(c => {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "chip"; b.dataset.cls = c.id;
+    b.type = "button"; b.className = "chip"; b.dataset.cls = c.id; b.lang = "en";
     b.style.setProperty("--cc", c.color);
     b.innerHTML = icon(c.id) + c.name;
     b.addEventListener("click", () => {
