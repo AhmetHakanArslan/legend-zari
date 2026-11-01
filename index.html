@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Legend Zarı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Chakra+Petch:wght@400;500;600&display=swap">
+<style>
+/* Layout: a game lobby — result panel on the left, class rows of legend tiles on the right, roll bar pinned to the bottom. Single dark look by choice. */
+:root {
+  color-scheme: dark;
+  --bg: #15171c;
+  --bg-2: #1d2027;
+  --tile: #262a33;
+  --line: #3a3f4b;
+  --fg: #eef0f4;
+  --muted: #8b92a1;
+  --accent: #ff6a2b;
+  --accent-ink: #1a0c05;
+  --c-assault: #e5484d;
+  --c-skirmisher: #e8b923;
+  --c-recon: #a26bf5;
+  --c-support: #3e8ff0;
+  --c-controller: #45c46a;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --ui: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --cut: 10px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background:
+    radial-gradient(1200px 600px at 70% -10%, #2a2f3a 0%, transparent 60%),
+    repeating-linear-gradient(60deg, transparent 0 38px, rgba(255,255,255,.018) 38px 39px),
+    var(--bg);
+  color: var(--fg);
+  font-family: var(--ui);
+  font-size: 14px;
+}
+.wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 120px;
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 28px;
+}
+header.top {
+  grid-column: 1 / -1;
+  display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
+}
+.brand { font-family: var(--display); font-weight: 800; font-size: 34px; letter-spacing: .02em; text-transform: uppercase; line-height: 1; }
+.brand span { color: var(--accent); }
+.sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.counts { font-family: var(--display); font-size: 18px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-variant-numeric: tabular-nums; }
+.counts b { color: var(--fg); font-weight: 700; }
+
+/* Result panel */
+.panel { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.result { min-height: 230px; }
+.result .eyebrow { font-family: var(--display); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-size: 14px; }
+.result h1 {
+  font-family: var(--display); font-weight: 800; text-transform: uppercase;
+  font-size: clamp(54px, 9vw, 84px); line-height: .9; margin: 8px 0 6px; letter-spacing: .01em;
+  text-wrap: balance; overflow-wrap: anywhere;
+}
+.result .cls { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: .06em; }
+.result .cls svg { width: 22px; height: 22px; }
+.result p { color: var(--muted); margin: 8px 0 0; line-height: 1.5; max-width: 34ch; }
+.result.idle h1 { color: var(--muted); }
+.result.landed h1 { animation: pop .45s cubic-bezier(.2,1.4,.4,1); }
+@keyframes pop { from { transform: scale(.85); opacity: .3; } to { transform: none; opacity: 1; } }
+
+.box { border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+.box h2 { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font: 600 13px var(--ui); letter-spacing: .04em; text-transform: uppercase;
+  color: var(--muted); background: transparent; border: 1px solid var(--line);
+  padding: 7px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%);
+}
+.chip svg { width: 14px; height: 14px; }
+.chip[aria-pressed="true"] { color: var(--fg); border-color: var(--cc); background: color-mix(in srgb, var(--cc) 18%, transparent); }
+.chip:focus-visible, .btn:focus-visible, .tile:focus-visible, .roll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check { display: flex; gap: 10px; align-items: center; color: var(--fg); cursor: pointer; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  font: 600 13px var(--ui); text-transform: uppercase; letter-spacing: .05em;
+  background: var(--bg-2); color: var(--fg); border: 1px solid var(--line); padding: 8px 12px; cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.history { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+.history span { font-family: var(--display); font-weight: 600; font-size: 16px; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; background: var(--bg-2); border-left: 3px solid var(--cc); }
+.history .empty { color: var(--muted); font-family: var(--ui); font-size: 13px; text-transform: none; letter-spacing: 0; background: none; border: 0; padding: 4px 0; }
+
+/* Roster */
+.roster { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+.hint b { color: var(--fg); font-weight: 600; }
+.groups { display: flex; flex-wrap: wrap; gap: 26px 22px; }
+.group { display: flex; flex-direction: column; gap: 8px; min-width: 0; max-width: 100%; }
+.group.off { opacity: .45; }
+.tiles { display: flex; flex-wrap: wrap; gap: 6px; }
+.glabel {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: .1em; text-transform: uppercase;
+  padding: 4px 10px 6px; border-bottom: 3px solid var(--cc);
+  background: linear-gradient(to top, color-mix(in srgb, var(--cc) 16%, transparent), transparent);
+}
+.glabel svg { width: 18px; height: 18px; color: var(--cc); }
+.glabel small { font-family: var(--ui); font-weight: 500; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+
+.tile {
+  --w: 84px;
+  width: var(--w); height: calc(var(--w) * 1.12);
+  position: relative; cursor: pointer; padding: 0; border: 0;
+  background: var(--tile); color: var(--fg);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+  display: flex; flex-direction: column; justify-content: space-between; align-items: stretch;
+  overflow: hidden;
+  transition: transform .12s ease, filter .2s ease;
+}
+.tile::before {
+  content: ""; position: absolute; inset: 0;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--cc) 42%, transparent) 0%, transparent 55%),
+    repeating-linear-gradient(var(--ang, 45deg), rgba(255,255,255,.05) 0 2px, transparent 2px 9px);
+}
+.tile::after { content: ""; position: absolute; inset: 0; border: 2px solid color-mix(in srgb, var(--cc) 55%, var(--line)); pointer-events: none; }
+.tile .mono {
+  position: relative; font-family: var(--display); font-weight: 800; font-size: 44px; line-height: 1;
+  text-align: left; padding: 8px 0 0 9px; color: color-mix(in srgb, var(--fg) 92%, var(--cc));
+  text-shadow: 0 2px 0 rgba(0,0,0,.35);
+}
+.tile .nm {
+  position: relative; font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: .05em; text-transform: uppercase;
+  background: rgba(0,0,0,.55); padding: 4px 6px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tile .lock { position: absolute; right: 6px; bottom: 26px; width: 18px; height: 18px; display: none; color: var(--fg); }
+.tile:hover { transform: translateY(-2px); }
+.tile.locked { filter: grayscale(1) brightness(.55); }
+.tile.locked .lock { display: block; }
+.tile.lit { transform: translateY(-3px) scale(1.04); z-index: 2; }
+.tile.lit::after { border-color: var(--accent); border-width: 3px; }
+.tile.picked::after { border-color: var(--accent); border-width: 3px; box-shadow: inset 0 0 24px color-mix(in srgb, var(--accent) 55%, transparent); }
+.tile.picked { transform: translateY(-3px); }
+
+/* Roll bar */
+.bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  background: linear-gradient(to top, var(--bg) 55%, transparent);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: 26px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; justify-content: center;
+}
+.roll {
+  font-family: var(--display); font-weight: 800; font-size: 28px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--accent-ink); background: var(--accent); border: 0; cursor: pointer;
+  padding: 12px 56px 13px; min-width: min(420px, 100%);
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+  transition: filter .15s ease, transform .1s ease;
+}
+.roll:hover { filter: brightness(1.08); }
+.roll:active { transform: translateY(1px); }
+.roll:disabled { filter: grayscale(.8) brightness(.6); cursor: not-allowed; }
+.roll kbd { font: 500 12px var(--ui); letter-spacing: .04em; opacity: .7; margin-left: 10px; }
+
+@media (max-width: 820px) {
+  .wrap { grid-template-columns: 1fr; gap: 22px; }
+  .result { min-height: 0; }
+  .tile { --w: 72px; }
+  .tile .mono { font-size: 38px; }
+  .roll kbd { display: none; }
+}
+@media (max-width: 420px) {
+  .tile { --w: 64px; }
+  .tile .mono { font-size: 32px; }
+  .tile .nm { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile, .roll { transition: none; }
+  .result.landed h1 { animation: none; }
+}
+</style>
+
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-assault" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></g></symbol>
+    <symbol id="i-skirmisher" viewBox="0 0 24 24"><path fill="currentColor" d="M4 13l8-9 8 9h-5v7H9v-7z"/></symbol>
+    <symbol id="i-recon" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></g></symbol>
+    <symbol id="i-support" viewBox="0 0 24 24"><path fill="currentColor" d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></symbol>
+    <symbol id="i-controller" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 2l8.7 5v10L12 22l-8.7-5V7z M12 8l3.5 2v4L12 16l-3.5-2v-4z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><path fill="currentColor" d="M7 10V7a5 5 0 0 1 10 0v3h1.5A1.5 1.5 0 0 1 20 11.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 20.5v-9A1.5 1.5 0 0 1 5.5 10zm2 0h6V7a3 3 0 0 0-6 0z"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand">Legend <span>Zarı</span></div>
+      <div class="sub">Açık olan legendlarını işaretle, zarı at, kim çıkarsa onu oyna.</div>
+    </div>
+    <div class="counts" id="counts"></div>
+  </header>
+
+  <section class="panel">
+    <div class="result idle" id="result" aria-live="polite">
+      <div class="eyebrow" id="r-eyebrow">Henüz zar atılmadı</div>
+      <h1 id="r-name">???</h1>
+      <div class="cls" id="r-cls"></div>
+      <p id="r-desc">Kilitli legendlarına tıklayıp kapat, sonra aşağıdaki butona bas.</p>
+    </div>
+
+    <div class="box">
+      <h2>Zara dahil sınıflar</h2>
+      <div class="chips" id="classChips"></div>
+    </div>
+
+    <div class="box">
+      <h2>Ayarlar</h2>
+      <label class="check"><input type="checkbox" id="noRepeat" checked> Aynı legend üst üste gelmesin</label>
+      <div class="row">
+        <button class="btn" id="unlockAll" type="button">Hepsini aç</button>
+        <button class="btn" id="lockAll" type="button">Hepsini kilitle</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>Son çıkanlar</h2>
+      <div class="history" id="history"></div>
+    </div>
+  </section>
+
+  <section class="roster">
+    <p class="hint"><b>Tıkla:</b> legend açık ↔ kilitli. Seçimlerin bu tarayıcıda kalır.</p>
+    <div class="groups" id="groups"></div>
+  </section>
+</div>
+
+<div class="bar">
+  <button class="roll" id="roll" type="button">Zar at <kbd>Boşluk</kbd></button>
+</div>
+
+<script>
+(function () {
+  const CLASSES = [
+    { id: "assault",    name: "Assault",    color: "var(--c-assault)",    desc: "Çatışmayı başlatan taraf. Öne atıl, baskı kur, ilk vuruşu sen yap.",
+      legends: ["Bangalore", "Revenant", "Fuse", "Mad Maggie", "Ballistic"] },
+    { id: "skirmisher", name: "Skirmisher", color: "var(--c-skirmisher)", desc: "Hızlı gir, hızlı çık. Hareket kabiliyetin takımın kaçış planı.",
+      legends: ["Pathfinder", "Wraith", "Octane", "Horizon", "Ash", "Alter", "Axle"] },
+    { id: "recon",      name: "Recon",      color: "var(--c-recon)",      desc: "Düşmanı bul, takımı yönlendir. Beacon taramak senin işin.",
+      legends: ["Bloodhound", "Crypto", "Valkyrie", "Seer", "Vantage", "Sparrow"] },
+    { id: "support",    name: "Support",    color: "var(--c-support)",    desc: "Takımı ayakta tut. Düşeni kaldır, iyileştir, toparla.",
+      legends: ["Gibraltar", "Lifeline", "Mirage", "Loba", "Newcastle", "Conduit"] },
+    { id: "controller", name: "Controller", color: "var(--c-controller)", desc: "Alanı kilitle. Bir binayı ele geçir ve kimseyi içeri sokma.",
+      legends: ["Caustic", "Wattson", "Rampart", "Catalyst"] },
+  ];
+  const ALL = [];
+  CLASSES.forEach(c => c.legends.forEach(n => ALL.push({ name: n, cls: c })));
+
+  const KEY = "legend-zari-v1";
+  let state = { locked: [], offClasses: [], noRepeat: true, history: [] };
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && typeof saved === "object") state = Object.assign(state, saved);
+  } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+  const $ = id => document.getElementById(id);
+  const icon = (id) => '<svg aria-hidden="true"><use href="#i-' + id + '"/></svg>';
+  const tiles = new Map();
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let rolling = false;
+
+  // Build class groups
+  const groupsEl = $("groups");
+  CLASSES.forEach(c => {
+    const g = document.createElement("div");
+    g.className = "group"; g.dataset.cls = c.id; g.style.setProperty("--cc", c.color);
+    const t = document.createElement("div"); t.className = "tiles";
+    c.legends.forEach((n, i) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "tile";
+      b.style.setProperty("--cc", c.color);
+      b.style.setProperty("--ang", (25 + (n.length * 37 + i * 53) % 130) + "deg");
+      const mono = n.split(" ").map(w => w[0]).join("").slice(0, 2);
+      b.innerHTML = '<span class="mono">' + mono + '</span><svg class="lock" aria-hidden="true"><use href="#i-lock"/></svg><span class="nm">' + n + '</span>';
+      b.addEventListener("click", () => {
+        if (rolling) return;
+        const i2 = state.locked.indexOf(n);
+        if (i2 >= 0) state.locked.splice(i2, 1); else state.locked.push(n);
+        save(); render();
+      });
+      tiles.set(n, b); t.appendChild(b);
+    });
+    const label = document.createElement("div");
+    label.className = "glabel";
+    label.innerHTML = icon(c.id) + c.name + ' <small id="cnt-' + c.id + '"></small>';
+    g.appendChild(t); g.appendChild(label);
+    groupsEl.appendChild(g);
+  });
+
+  // Class chips
+  const chipsEl = $("classChips");
+  CLASSES.forEach(c => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.dataset.cls = c.id;
+    b.style.setProperty("--cc", c.color);
+    b.innerHTML = icon(c.id) + c.name;
+    b.addEventListener("click", () => {
+      if (rolling) return;
+      const i = state.offClasses.indexOf(c.id);
+      if (i >= 0) state.offClasses.splice(i, 1); else state.offClasses.push(c.id);
+      save(); render();
+    });
+    chipsEl.appendChild(b);
+  });
+
+  $("noRepeat").addEventListener("change", e => { state.noRepeat = e.target.checked; save(); render(); });
+  $("unlockAll").addEventListener("click", () => { if (rolling) return; state.locked = []; save(); render(); });
+  $("lockAll").addEventListener("click", () => { if (rolling) return; state.locked = ALL.map(l => l.name); save(); render(); });
+
+  function pool() {
+    let p = ALL.filter(l => !state.locked.includes(l.name) && !state.offClasses.includes(l.cls.id));
+    const last = state.history[0];
+    if (state.noRepeat && last && p.length > 1) p = p.filter(l => l.name !== last);
+    return p;
+  }
+
+  function render() {
+    const open = ALL.filter(l => !state.locked.includes(l.name)).length;
+    $("counts").innerHTML = '<b>' + open + '</b> / ' + ALL.length + ' açık';
+    tiles.forEach((b, n) => {
+      const lk = state.locked.includes(n);
+      b.classList.toggle("locked", lk);
+      b.setAttribute("aria-pressed", String(!lk));
+      b.setAttribute("aria-label", n + ', ' + (lk ? 'kilitli' : 'açık'));
+    });
+    CLASSES.forEach(c => {
+      const on = c.legends.filter(n => !state.locked.includes(n)).length;
+      $("cnt-" + c.id).textContent = on + '/' + c.legends.length;
+      document.querySelector('.group[data-cls="' + c.id + '"]').classList.toggle("off", state.offClasses.includes(c.id));
+      document.querySelector('.chip[data-cls="' + c.id + '"]').setAttribute("aria-pressed", String(!state.offClasses.includes(c.id)));
+    });
+    $("noRepeat").checked = state.noRepeat;
+    const p = pool();
+    const btn = $("roll");
+    btn.disabled = p.length === 0 || rolling;
+    if (p.length === 0 && !rolling) {
+      $("r-desc").textContent = "Zara girebilecek legend kalmadı. Birkaç legend aç ya da bir sınıfı geri ekle.";
+    }
+    const h = $("history");
+    h.innerHTML = state.history.length
+      ? state.history.map(n => {
+          const l = ALL.find(x => x.name === n);
+          return '<span style="--cc:' + (l ? l.cls.color : 'var(--line)') + '">' + n + '</span>';
+        }).join("")
+      : '<span class="empty">Zar atınca burada görünecek.</span>';
+  }
+
+  function showResult(l) {
+    const r = $("result");
+    r.classList.remove("idle", "landed");
+    void r.offsetWidth;
+    r.classList.add("landed");
+    $("r-eyebrow").textContent = "Bu el oynayacağın legend";
+    $("r-name").textContent = l.name;
+    const cls = $("r-cls");
+    cls.style.color = l.cls.color;
+    cls.innerHTML = icon(l.cls.id) + l.cls.name;
+    $("r-desc").textContent = l.cls.desc;
+  }
+
+  function roll() {
+    if (rolling) return;
+    const p = pool();
+    if (!p.length) return;
+    const pick = p[Math.floor(Math.random() * p.length)];
+    tiles.forEach(b => b.classList.remove("picked", "lit"));
+
+    const finish = () => {
+      tiles.forEach(b => b.classList.remove("lit"));
+      tiles.get(pick.name).classList.add("picked");
+      state.history = [pick.name, ...state.history].slice(0, 6);
+      save();
+      rolling = false;
+      showResult(pick);
+      render();
+    };
+
+    if (reduce || p.length === 1) { finish(); return; }
+
+    rolling = true; render();
+    $("r-eyebrow").textContent = "Zar dönüyor…";
+    let steps = 18 + Math.floor(Math.random() * 6), delay = 45, prev = null;
+    const tick = () => {
+      if (prev) prev.classList.remove("lit");
+      if (steps <= 0) { finish(); return; }
+      let cand = p[Math.floor(Math.random() * p.length)];
+      if (p.length > 1 && prev && tiles.get(cand.name) === prev) cand = p[(p.indexOf(cand) + 1) % p.length];
+      prev = tiles.get(cand.name);
+      prev.classList.add("lit");
+      $("r-name").textContent = cand.name;
+      steps--; delay *= 1.11;
+      setTimeout(tick, delay);
+    };
+    tick();
+  }
+
+  $("roll").addEventListener("click", roll);
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" && !e.repeat && !(e.target.closest && e.target.closest("button, input"))) {
+      e.preventDefault(); roll();
+    }
+  });
+
+  render();
+  if (state.history[0]) {
+    const l = ALL.find(x => x.name === state.history[0]);
+    if (l) { tiles.get(l.name).classList.add("picked"); showResult(l); $("r-eyebrow").textContent = "Son çıkan"; }
+  }
+})();
+</script>
+
+</body>
+</html>
